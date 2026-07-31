@@ -41,9 +41,6 @@ REWARD_URL = "https://blackhammerco.com/def4/reward_2026_06_15.php"
 LID = "English"
 OID = "and"
 
-# Your Discord server ID for instant slash command synchronization
-MY_GUILD = discord.Object(id=701758056912125953)
-
 # === DISCORD USER MAPPINGS -> (GAME ID, NICKNAME) ===
 USER_DATA = {
     1107683363457876029: {
@@ -233,11 +230,9 @@ async def run_farming_process(
 @bot.event
 async def on_ready():
   try:
-    bot.tree.clear_commands(guild=None)
-    synced = await bot.tree.sync(guild=MY_GUILD)
-    print(
-        f"Synchronized slash commands for server {MY_GUILD.id}: {len(synced)}"
-    )
+    # Глобальная синхронизация команд для всех серверов
+    synced = await bot.tree.sync()
+    print(f"Synchronized {len(synced)} global slash commands.")
   except Exception as e:
     print(e)
   print(f"Bot {bot.user} successfully started!")
