@@ -3,10 +3,10 @@ import hashlib
 import os
 import random
 import uuid
+import aiohttp
 import discord
 from discord import app_commands
 from discord.ext import commands
-import requests as r
 
 # URL Settings
 JOIN_URL = "https://blackhammerco.com/def4/join_20250818.php"
@@ -46,7 +46,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 active_farmers = set()
 
 
-def get_session_data(account_id):
+async def get_session_data(account_id):
     pid = uuid.uuid4().hex
     sid = "join"
     input1 = "English"
@@ -58,29 +58,31 @@ def get_session_data(account_id):
     raw_string = f"{account_id}{sid}{pid}{input1}{input2}{input3}{input4}"
     eid = hashlib.md5(raw_string.encode("utf-8")).hexdigest()
 
-    files = {
-        "id": (None, account_id),
-        "sid": (None, sid),
-        "pid": (None, pid),
-        "lid": (None, LID),
-        "oid": (None, OID),
-        "did": (None, did),
-        "input1": (None, input1),
-        "input2": (None, input2),
-        "input3": (None, input3),
-        "input4": (None, input4),
-        "eid": (None, eid),
-    }
+    form = aiohttp.FormData()
+    form.add_field("id", account_id)
+    form.add_field("sid", sid)
+    form.add_field("pid", pid)
+    form.add_field("lid", LID)
+    form.add_field("oid", OID)
+    form.add_field("did", did)
+    form.add_field("input1", input1)
+    form.add_field("input2", input2)
+    form.add_field("input3", input3)
+    form.add_field("input4", input4)
+    form.add_field("eid", eid)
 
     try:
-        response = r.post(JOIN_URL, files=files, timeout=10)
-        if response.status_code == 200:
-            text = response.text.strip()
-            parts = text.split("|")
-            extracted_did = parts[-1]
-            return pid, extracted_did
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                JOIN_URL, data=form, headers=HEADERS, timeout=10
+            ) as response:
+                if response.status == 200:
+                    text = await response.text()
+                    parts = text.strip().split("|")
+                    extracted_did = parts[-1]
+                    return pid, extracted_did
     except Exception as e:
-        print(e)
+        print(f"Join error: {e}")
 
     return pid, "1028451"
 
@@ -91,7 +93,6 @@ def generate_reward_payload(user_game_id, user_nickname, pid, did):
     start_time = random.uniform(70_000_000.0, 71_000_000.0)
     end_time = start_time + random.uniform(100_000.0, 999_999.0)
 
-    damage1 = start_time
     damage2 = end_time
 
     input5_val = f"5,{round_seconds},3,{start_time:.5f},{end_time:.5f},"
@@ -128,7 +129,7 @@ def generate_reward_payload(user_game_id, user_nickname, pid, did):
         payload["input8"],
     ]
     payload["eid"] = hashlib.md5("".join(hash_fields).encode("utf-8")).hexdigest()
-    return payload, round_seconds
+    return payload
 
 
 async def run_farming_process(
@@ -143,7 +144,7 @@ async def run_farming_process(
     )
 
     try:
-        pid, did = get_session_data(user_game_id)
+        pid, did = await get_session_data(user_game_id)
 
         for i in range(1, games_count + 1):
             if user_game_id not in active_farmers:
@@ -153,28 +154,31 @@ async def run_farming_process(
                 )
                 return
 
-            data, round_sec = generate_reward_payload(
-                user_game_id, user_nickname, pid, did
-            )
+            data = generate_reward_payload(user_game_id, user_nickname, pid, did)
 
             reward_headers = HEADERS.copy()
             reward_headers["Content-Type"] = "application/x-www-form-urlencoded"
 
             try:
-                response = r.post(
-                    REWARD_URL, data=data, headers=reward_headers, timeout=10
-                )
-                if response.status_code == 200:
-                    await channel.send(
-                        f"🎮 [{i}/{games_count}] Game sent for **{user_nickname}**"
-                        f" (PID: `{pid[:8]}...`). Response:"
-                        f" `{response.text.strip()}`"
-                    )
-                else:
-                    await channel.send(
-                        f"❌ [{i}/{games_count}] Server error:"
-                        f" {response.status_code}"
-                    )
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(
+                        REWARD_URL,
+                        data=data,
+                        headers=reward_headers,
+                        timeout=10,
+                    ) as response:
+                        response_text = await response.text()
+                        if response.status == 200:
+                            await channel.send(
+                                f"🎮 [{i}/{games_count}] Game sent for"
+                                f" **{user_nickname}** (PID: `{pid[:8]}...`)."
+                                f" Response: `{response_text.strip()}`"
+                            )
+                        else:
+                            await channel.send(
+                                f"❌ [{i}/{games_count}] Server error:"
+                                f" {response.status}"
+                            )
             except Exception as e:
                 await channel.send(f"❌ [{i}/{games_count}] Network error: `{e}`")
 
@@ -222,9 +226,7 @@ async def startdef_slash(
     min_delay: int = 10,
     max_delay: int = 20,
 ):
-    await interaction.response.send_message(
-        "⚙️ Проверка параметров...", ephemeral=True
-    )
+    await interaction.response.defer(ephemeral=True)
 
     user_to_farm = interaction.user.id
 
@@ -272,9 +274,10 @@ async def startdef_slash(
     name="stop", description="Остановить свой активный фарм"
 )
 async def stop_slash(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
     user_id = interaction.user.id
     if user_id not in USER_DATA:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             "❌ У вас нет привязанного аккаунта.", ephemeral=True
         )
         return
@@ -282,11 +285,11 @@ async def stop_slash(interaction: discord.Interaction):
     account_id = USER_DATA[user_id]["game_id"]
     if account_id in active_farmers:
         active_farmers.discard(account_id)
-        await interaction.response.send_message(
+        await interaction.followup.send(
             "🛑 Ваш процесс фарминга остановлен.", ephemeral=True
         )
     else:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             "⚠️ У вас нет активных запущенных процессов фарминга.",
             ephemeral=True,
         )
