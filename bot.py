@@ -46,7 +46,7 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Set to track active farming processes (храним по game_id)
+# Set to track active farming processes
 active_farmers = set()
 
 
@@ -143,7 +143,7 @@ async def run_farming_process(
     await channel.send(
         f"🚀 Starting auto-farm for (nickname: **{user_nickname}**):"
         f" **{games_count}** game(s) with a delay from **{min_delay}** to"
-        f" **{max_delay}** sec...\n*(To stop, send `/stop` or `!stop`)*"
+        f" **{max_delay}** sec...\n*(To stop, send `/stop`)*"
     )
 
     try:
@@ -214,7 +214,6 @@ async def on_ready():
     print(f"Bot {bot.user} successfully started!")
 
 
-# 1. Slash command /startdef с выбором пользователя (только для тебя)
 @bot.tree.command(name="startdef", description="Запустить автофарм")
 @app_commands.describe(
     target_user="Кому запустить фарм (доступно только создателю)",
@@ -229,11 +228,11 @@ async def startdef_slash(
     min_delay: int = 10,
     max_delay: int = 20,
 ):
+    # Мгновенно отвечаем Discord, чтобы избежать ошибки 10062
     await interaction.response.send_message(
         "⚙️ Проверка параметров...", ephemeral=True
     )
 
-    # Определяем, чей аккаунт запускаем
     if target_user is not None:
         if interaction.user.id != ADMIN_DISCORD_ID:
             await interaction.followup.send(
@@ -285,7 +284,6 @@ async def startdef_slash(
     )
 
 
-# 2. Slash command /stop
 @bot.tree.command(name="stop", description="Остановить все активные фармы")
 async def stop_slash(interaction: discord.Interaction):
     if interaction.user.id != ADMIN_DISCORD_ID:
@@ -302,5 +300,4 @@ async def stop_slash(interaction: discord.Interaction):
     )
 
 
-# Запуск бота (токен подтягивается из переменной окружения DISCORD_TOKEN на Render)
 bot.run(os.getenv("DISCORD_TOKEN"))
