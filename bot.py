@@ -1,12 +1,10 @@
 import hashlib
+import os
 import threading
 import uuid
 import discord
 from discord import app_commands
 from discord.ext import commands
-
-# === WEB SERVER / RENDER KEEP-ALIVE (если нужен) ===
-# Здесь может быть твой код веб-сервера...
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -24,10 +22,9 @@ LID = "English"
 OID = "and"
 
 # === ID АДМИНИСТРАТОРА (Твой Discord ID) ===
-# Только этот пользователь сможет запускать фарм для других аккаунтов
-ADMIN_DISCORD_ID = 535111936178651171  # Можешь поменять на свой, если нужно
+ADMIN_DISCORD_ID = 535111936178651171
 
-# === === DISCORD USER MAPPINGS -> (GAME ID, NICKNAME) ===
+# === DISCORD USER MAPPINGS -> (GAME ID, NICKNAME) ===
 USER_DATA = {
     1107683363457876029: {
         "game_id": "a_7857234430897713376",
@@ -78,7 +75,6 @@ async def on_ready():
     print(f"Бот {bot.user} успешно запущен и синхронизирован!")
 
 
-# === СЛЭШ-КОМАНДА С ВЫБОРОМ ПОЛЬЗОВАТЕЛЯ ===
 @bot.tree.command(name="startdef", description="Запустить автофарм")
 @app_commands.describe(
     target_user="Кому запустить фарм (доступно только создателю)"
@@ -86,14 +82,11 @@ async def on_ready():
 async def startdef(
     interaction: discord.Interaction, target_user: discord.Member = None
 ):
-    # Сразу отвечаем Discord, чтобы избежать ошибки "Приложение не отвечает"
     await interaction.response.send_message(
         "⚙️ Проверка параметров...", ephemeral=True
     )
 
-    # Определяем, чей аккаунт запускаем
     if target_user is not None:
-        # Проверка: если кто-то другой пытается запустить чужой аккаунт
         if interaction.user.id != ADMIN_DISCORD_ID:
             await interaction.followup.send(
                 "❌ Только создатель бота может запускать фарм для других аккаунтов!",
@@ -104,7 +97,6 @@ async def startdef(
     else:
         user_to_farm = interaction.user.id
 
-    # Проверяем, есть ли аккаунт в базе
     if user_to_farm not in USER_DATA:
         await interaction.followup.send(
             "❌ Этот пользователь не настроен в словаре USER_DATA!",
@@ -116,7 +108,6 @@ async def startdef(
     account_id = acc_info["game_id"]
     nickname = acc_info["nickname"]
 
-    # Проверка на дубликаты запусков
     if account_id in active_farmers:
         await interaction.followup.send(
             f"⚠️ Автофарм для игрока **{nickname}** уже запущен!",
@@ -128,10 +119,6 @@ async def startdef(
     await interaction.followup.send(
         f"🚀 Автофарм успешно запущен для игрока **{nickname}**!", ephemeral=True
     )
-
-    # Здесь будет выполняться твоя логика фарма (например, цикл запросов)
-    # Пример вызова твоей функции сессии:
-    # session_data = get_session_data(account_id)
 
 
 @bot.tree.command(name="stop", description="Остановить фарм")
@@ -145,5 +132,5 @@ async def stop(interaction: discord.Interaction):
     )
 
 
-# Замени на свой токен бота
-bot.run("YOUR_BOT_TOKEN")
+# Токен подтягивается из переменных окружения Render
+bot.run(os.getenv("DISCORD_TOKEN"))
