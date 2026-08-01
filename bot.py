@@ -15,17 +15,12 @@ REWARD_URL = "https://blackhammerco.com/def4/reward_2026_06_15.php"
 LID = "English"
 OID = "and"
 
-# === ID АДМИНИСТРАТОРА (Твой правильный Discord ID) ===
-ADMIN_DISCORD_ID = 498781215306809344
-
 # === DISCORD USER MAPPINGS -> (GAME ID, NICKNAME) ===
 USER_DATA = {
-    # Твой аккаунт
     498781215306809344: {
         "game_id": "a_3693527683322122883",
         "nickname": "pokida",
     },
-    # Другие игроки
     1107683363457876029: {
         "game_id": "a_7857234430897713376",
         "nickname": "OverdoseM",
@@ -215,16 +210,14 @@ async def on_ready():
     print(f"Bot {bot.user} successfully started!")
 
 
-@bot.tree.command(name="startdef", description="Запустить автофарм")
+@bot.tree.command(name="startdef", description="Запустить автофарм для себя")
 @app_commands.describe(
-    target_user="Кому запустить фарм (доступно только создателю)",
     games_count="Количество игр (по умолчанию 1)",
     min_delay="Мин. задержка в сек (по умолчанию 10)",
     max_delay="Макс. задержка в сек (по умолчанию 20)",
 )
 async def startdef_slash(
     interaction: discord.Interaction,
-    target_user: discord.Member = None,
     games_count: int = 1,
     min_delay: int = 10,
     max_delay: int = 20,
@@ -233,20 +226,11 @@ async def startdef_slash(
         "⚙️ Проверка параметров...", ephemeral=True
     )
 
-    if target_user is not None:
-        if interaction.user.id != ADMIN_DISCORD_ID:
-            await interaction.followup.send(
-                "❌ Только создатель бота может запускать фарм для других аккаунтов!",
-                ephemeral=True,
-            )
-            return
-        user_to_farm = target_user.id
-    else:
-        user_to_farm = interaction.user.id
+    user_to_farm = interaction.user.id
 
     if user_to_farm not in USER_DATA:
         await interaction.followup.send(
-            "❌ У этого пользователя нет привязанного игрового аккаунта!",
+            "❌ У вашего аккаунта Discord нет привязанного игрового профиля!",
             ephemeral=True,
         )
         return
@@ -284,20 +268,28 @@ async def startdef_slash(
     )
 
 
-@bot.tree.command(name="stop", description="Остановить все активные фармы")
+@bot.tree.command(
+    name="stop", description="Остановить свой активный фарм"
+)
 async def stop_slash(interaction: discord.Interaction):
-    if interaction.user.id != ADMIN_DISCORD_ID:
+    user_id = interaction.user.id
+    if user_id not in USER_DATA:
         await interaction.response.send_message(
-            "❌ Только создатель бота может останавливать процессы.",
-            ephemeral=True,
+            "❌ У вас нет привязанного аккаунта.", ephemeral=True
         )
         return
 
-    active_farmers.clear()
-    await interaction.response.send_message(
-        "🛑 Все активные процессы фарминга принудительно остановлены.",
-        ephemeral=False,
-    )
+    account_id = USER_DATA[user_id]["game_id"]
+    if account_id in active_farmers:
+        active_farmers.discard(account_id)
+        await interaction.response.send_message(
+            "🛑 Ваш процесс фарминга остановлен.", ephemeral=True
+        )
+    else:
+        await interaction.response.send_message(
+            "⚠️ У вас нет активных запущенных процессов фарминга.",
+            ephemeral=True,
+        )
 
 
 bot.run(os.getenv("DISCORD_TOKEN"))
