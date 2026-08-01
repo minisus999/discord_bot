@@ -20,17 +20,20 @@ ADMIN_DISCORD_ID = 535111936178651171
 
 # === DISCORD USER MAPPINGS -> (GAME ID, NICKNAME) ===
 USER_DATA = {
+    # Твой аккаунт
+    535111936178651171: {
+        "game_id": "a_3693527683322122883",
+        "nickname": "pokida",
+    },
+    # Другие игроки
     1107683363457876029: {
         "game_id": "a_7857234430897713376",
         "nickname": "OverdoseM",
     },
-    535111936178651171: {
+    # Если у JonSmith другой Discord ID, его можно будет обновить отдельно
+    999999999999999999: {
         "game_id": "a_3066415753614056779",
         "nickname": "JonSmith",
-    },
-    498781215306809344: {
-        "game_id": "a_3693527683322122883",
-        "nickname": "pokida",
     },
 }
 
@@ -46,7 +49,6 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Set to track active farming processes
 active_farmers = set()
 
 
@@ -228,7 +230,6 @@ async def startdef_slash(
     min_delay: int = 10,
     max_delay: int = 20,
 ):
-    # Мгновенно отвечаем Discord, чтобы избежать ошибки 10062
     await interaction.response.send_message(
         "⚙️ Проверка параметров...", ephemeral=True
     )
