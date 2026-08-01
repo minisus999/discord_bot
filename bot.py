@@ -15,13 +15,13 @@ REWARD_URL = "https://blackhammerco.com/def4/reward_2026_06_15.php"
 LID = "English"
 OID = "and"
 
-# === ID АДМИНИСТРАТОРА (Твой Discord ID) ===
-ADMIN_DISCORD_ID = 535111936178651171
+# === ID АДМИНИСТРАТОРА (Твой правильный Discord ID) ===
+ADMIN_DISCORD_ID = 498781215306809344
 
 # === DISCORD USER MAPPINGS -> (GAME ID, NICKNAME) ===
 USER_DATA = {
     # Твой аккаунт
-    535111936178651171: {
+    498781215306809344: {
         "game_id": "a_3693527683322122883",
         "nickname": "pokida",
     },
@@ -30,8 +30,7 @@ USER_DATA = {
         "game_id": "a_7857234430897713376",
         "nickname": "OverdoseM",
     },
-    # Если у JonSmith другой Discord ID, его можно будет обновить отдельно
-    999999999999999999: {
+    535111936178651171: {
         "game_id": "a_3066415753614056779",
         "nickname": "JonSmith",
     },
